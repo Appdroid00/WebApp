@@ -348,7 +348,8 @@ function renderChart(){
 const data=history.map(h=>h.weight);
 const labels=history.map((_,i)=>i+1);
 
-new Chart(document.getElementById("chart"),{
+if(window.myChart) window.myChart.destroy();
+window.myChart = new Chart(...)
 type:'line',
 data:{labels,datasets:[{label:"Progress",data}]}
 });
