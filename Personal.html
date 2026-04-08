@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GymTracker AI Pro</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --bg:#0f172a;
+  --glass:rgba(255,255,255,0.06);
+  --accent:#22c55e;
+  --text:#e5e7eb;
+}
+body{
+  margin:0;
+  font-family:system-ui;
+  background:linear-gradient(180deg,#020617,#0f172a);
+  color:var(--text);
+}
+.container{max-width:500px;margin:auto;padding:12px;}
+.card{
+  background:var(--glass);
+  border-radius:16px;
+  padding:12px;
+  margin-bottom:12px;
+}
+button{
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:12px;
+  background:#22c55e;
+  color:white;
+  font-weight:bold;
+  margin-top:6px;
+}
+input,select{
+  width:100%;
+  padding:10px;
+  border-radius:12px;
+  border:none;
+  margin-top:6px;
+}
+.set{
+  display:flex;
+  justify-content:space-between;
+  background:rgba(255,255,255,0.05);
+  padding:10px;
+  border-radius:10px;
+  margin-top:6px;
+}
+.timer{
+  font-size:40px;
+  text-align:center;
+  font-weight:bold;
+}
+.nav{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  display:flex;
+  background:#111;
+}
+.nav button{flex:1;background:none;color:#aaa;}
+.nav button.active{color:#22c55e;}
+.screen{display:none;}
+.activeScreen{display:block;}
+.spacer{height:80px;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<!-- WORKOUT -->
+<div id="workout" class="screen activeScreen">
+
+<div class="card">
+<h2>🤖 Smart Workout</h2>
+
+<label><input type="checkbox" value="Barbell"> Barbell</label><br>
+<label><input type="checkbox" value="Dumbbell"> Dumbbell</label><br>
+<label><input type="checkbox" value="Machine"> Machine</label><br>
+<label><input type="checkbox" value="Cable"> Cable</label><br>
+<label><input type="checkbox" value="Bodyweight"> Bodyweight</label>
+
+<button onclick="generateSmartWorkout()">Generate Workout</button>
+</div>
+
+<div class="card">
+<select id="exercise"></select>
+<input id="reps" type="number" placeholder="Reps">
+<input id="weight" type="number" placeholder="Weight">
+<button onclick="addSet()">Log Set</button>
+</div>
+
+<div class="card">
+<h3>Sets</h3>
+<div id="sets"></div>
+</div>
+
+<div class="card">
+<h3>Next Set</h3>
+<div id="nextSet">---</div>
+</div>
+
+<div class="card">
+<h3>⏱️ Rest Timer</h3>
+<div id="timer" class="timer">01:30</div>
+<button onclick="startTimer()">Start</button>
+</div>
+
+<button onclick="saveWorkout()">Finish Workout</button>
+
+</div>
+
+<!-- PROGRESS -->
+<div id="progress" class="screen">
+<div class="card">
+<h2>Progress 📈</h2>
+<canvas id="chart"></canvas>
+</div>
+</div>
+
+<!-- MUSCLES -->
+<div id="muscles" class="screen">
+<div class="card">
+<h2>Muscle Stats 💪</h2>
+<div id="muscleStats"></div>
+</div>
+</div>
+
+<!-- HISTORY -->
+<div id="historyScreen" class="screen">
+<div class="card">
+<h2>History</h2>
+<div id="historyList"></div>
+</div>
+</div>
+
+<div class="spacer"></div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+<button class="active" onclick="showTab('workout',this)">🏋️</button>
+<button onclick="showTab('progress',this)">📈</button>
+<button onclick="showTab('muscles',this)">💪</button>
+<button onclick="showTab('historyScreen',this)">🗂️</button>
+</div>
+
+<script>
+// ================= DATA =================
+const exerciseDB = [
+{name:"Bench Press", muscle:"Chest", equipment:"Barbell"},
+{name:"Incline DB Press", muscle:"Chest", equipment:"Dumbbell"},
+{name:"Chest Press", muscle:"Chest", equipment:"Machine"},
+{name:"Pull Up", muscle:"Back", equipment:"Bodyweight"},
+{name:"Lat Pulldown", muscle:"Back", equipment:"Cable"},
+{name:"Row", muscle:"Back", equipment:"Barbell"},
+{name:"Squat", muscle:"Legs", equipment:"Barbell"},
+{name:"Leg Press", muscle:"Legs", equipment:"Machine"},
+{name:"Leg Curl", muscle:"Legs", equipment:"Machine"},
+{name:"Shoulder Press", muscle:"Shoulders", equipment:"Dumbbell"},
+{name:"Lateral Raise", muscle:"Shoulders", equipment:"Dumbbell"},
+{name:"Bicep Curl", muscle:"Arms", equipment:"Dumbbell"},
+{name:"Tricep Pushdown", muscle:"Arms", equipment:"Cable"}
+];
+
+const muscleMap = {
+"Bench Press":"Chest","Incline DB Press":"Chest","Chest Press":"Chest",
+"Pull Up":"Back","Lat Pulldown":"Back","Row":"Back",
+"Squat":"Legs","Leg Press":"Legs","Leg Curl":"Legs",
+"Shoulder Press":"Shoulders","Lateral Raise":"Shoulders",
+"Bicep Curl":"Arms","Tricep Pushdown":"Arms"
+};
+
+let history = JSON.parse(localStorage.getItem("history")) || [];
+let workouts = JSON.parse(localStorage.getItem("workouts")) || [];
+let setList = [];
+
+// ✅ FIXED TIMER VARIABLES
+let restTime = 90;
+let current = restTime;
+let restInterval;
+
+// ================= SMART AI =================
+function generateSmartWorkout(){
+const checked = [...document.querySelectorAll('input[type=checkbox]:checked')]
+.map(cb => cb.value);
+
+if(checked.length === 0){
+alert("Select equipment");
+return;
+}
+
+let available = exerciseDB.filter(ex => checked.includes(ex.equipment));
+
+let muscles = {};
+available.forEach(ex=>{
+if(!muscles[ex.muscle]) muscles[ex.muscle]=[];
+muscles[ex.muscle].push(ex);
+});
+
+const order=["Chest","Back","Legs","Shoulders","Arms"];
+let workout=[];
+
+order.forEach(m=>{
+if(muscles[m]) workout.push(muscles[m][0]);
+});
+
+workout=workout.slice(0,5);
+
+displayWorkout(workout);
+}
+
+// ================= DISPLAY =================
+function displayWorkout(workout){
+sets.innerHTML="";
+exercise.innerHTML="";
+
+workout.forEach(ex=>{
+let records = history.filter(h=>h.exercise===ex.name);
+
+let weight=20,reps=10;
+
+if(records.length>0){
+let last=records.at(-1);
+if(last.reps>=10) weight=last.weight+2.5;
+else if(last.reps<6) weight=last.weight-2.5;
+else weight=last.weight;
+reps=last.reps;
+}
+
+let opt=document.createElement("option");
+opt.textContent=ex.name;
+exercise.appendChild(opt);
+
+let div=document.createElement("div");
+div.className="card";
+div.innerHTML=`
+<h3>${ex.name}</h3>
+<p>${ex.muscle}</p>
+<p>3x${reps} @ ${weight}kg</p>
+<button onclick="startExercise('${ex.name}',${reps},${weight})">Start</button>
+`;
+sets.appendChild(div);
+});
+}
+
+// ================= START =================
+function startExercise(name,r,w){
+exercise.value=name;
+reps.value=r;
+weight.value=w;
+setList=[];
+renderSets();
+}
+
+// ================= ADD SET =================
+function addSet(){
+let r=+reps.value,w=+weight.value;
+if(!r||!w)return;
+
+setList.push({reps:r,weight:w});
+renderSets();
+
+history.push({exercise:exercise.value,reps:r,weight:w});
+localStorage.setItem("history",JSON.stringify(history));
+
+suggestNext();
+
+resetTimer();
+startTimer();
+
+reps.value="";
+weight.value="";
+}
+
+// ================= RENDER =================
+function renderSets(){
+sets.innerHTML="";
+setList.forEach((s,i)=>{
+let d=document.createElement("div");
+d.className="set";
+d.innerHTML=`<span>Set ${i+1}</span><span>${s.reps}</span><span>${s.weight}</span>`;
+sets.appendChild(d);
+});
+}
+
+// ================= NEXT =================
+function suggestNext(){
+let last=setList.at(-1);
+nextSet.innerText=`Next: ${last.reps} @ ${last.weight+2.5}kg`;
+}
+
+// ================= ✅ FIXED TIMER =================
+function startTimer(){
+clearInterval(restInterval);
+
+restInterval = setInterval(()=>{
+current--;
+updateTimer();
+
+if(current <= 0){
+clearInterval(restInterval);
+alert("Next Set 💪");
+}
+},1000);
+}
+
+function resetTimer(){
+clearInterval(restInterval);
+current = restTime;
+updateTimer();
+}
+
+function updateTimer(){
+document.getElementById("timer").innerText =
+`${Math.floor(current/60)}:${(current%60).toString().padStart(2,'0')}`;
+}
+
+// ================= SAVE =================
+function saveWorkout(){
+workouts.push({exercise:exercise.value,sets:[...setList]});
+localStorage.setItem("workouts",JSON.stringify(workouts));
+setList=[];
+renderSets();
+renderAll();
+alert("Saved ✅");
+}
+
+// ================= NAV =================
+function showTab(id,btn){
+document.querySelectorAll('.screen').forEach(s=>s.classList.remove('activeScreen'));
+document.getElementById(id).classList.add('activeScreen');
+document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+btn.classList.add('active');
+renderAll();
+}
+
+// ================= CHART =================
+function renderChart(){
+const data=history.map(h=>h.weight);
+const labels=history.map((_,i)=>i+1);
+
+new Chart(document.getElementById("chart"),{
+type:'line',
+data:{labels,datasets:[{label:"Progress",data}]}
+});
+}
+
+// ================= MUSCLE =================
+function renderMuscle(){
+let stats={};
+workouts.forEach(w=>{
+let m=muscleMap[w.exercise]||"Other";
+if(!stats[m])stats[m]=0;
+w.sets.forEach(s=>stats[m]+=s.reps*s.weight);
+});
+muscleStats.innerHTML="";
+for(let m in stats){
+let d=document.createElement("div");
+d.className="set";
+d.innerHTML=`<span>${m}</span><span>${stats[m]}</span>`;
+muscleStats.appendChild(d);
+}
+}
+
+// ================= HISTORY =================
+function renderHistory(){
+historyList.innerHTML="";
+workouts.forEach(w=>{
+let d=document.createElement("div");
+d.className="set";
+d.innerText=`${w.exercise} (${w.sets.length} sets)`;
+historyList.appendChild(d);
+});
+}
+
+function renderAll(){
+renderChart();
+renderMuscle();
+renderHistory();
+}
+
+// INIT
+updateTimer();
+renderAll();
+</script>
+
+</body>
+</html>
