@@ -120,7 +120,31 @@ input,select{
 }
 
 .nav button.active{color:#22c55e;}
+.equipment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
 
+.equip-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 12px;
+  border-radius: 12px;
+
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Bigger, cleaner checkbox */
+.equip-item input {
+  width: 18px;
+  height: 18px;
+  accent-color: #22c55e;
+}
 /* FAB */
 .fab{
   position:fixed;
@@ -154,11 +178,32 @@ input,select{
 <div class="card">
 <h2>Smart Workout</h2>
 
-<label><input type="checkbox" value="Barbell"> Barbell</label><br>
-<label><input type="checkbox" value="Dumbbell"> Dumbbell</label><br>
-<label><input type="checkbox" value="Machine"> Machine</label><br>
-<label><input type="checkbox" value="Cable"> Cable</label><br>
-<label><input type="checkbox" value="Bodyweight"> Bodyweight</label>
+<div class="equipment-list">
+  <label class="equip-item">
+    <span>Barbell</span>
+    <input type="checkbox" value="Barbell">
+  </label>
+
+  <label class="equip-item">
+    <span>Dumbbell</span>
+    <input type="checkbox" value="Dumbbell">
+  </label>
+
+  <label class="equip-item">
+    <span>Machine</span>
+    <input type="checkbox" value="Machine">
+  </label>
+
+  <label class="equip-item">
+    <span>Cable</span>
+    <input type="checkbox" value="Cable">
+  </label>
+
+  <label class="equip-item">
+    <span>Bodyweight</span>
+    <input type="checkbox" value="Bodyweight">
+  </label>
+</div>
 
 <button onclick="generateSmartWorkout()">Generate Workout</button>
 </div>
