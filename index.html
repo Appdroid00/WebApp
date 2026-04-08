@@ -3,60 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GymTracker AI Pro</title>
 
+<title>GymTracker Pro</title>
+
+<link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
   margin:0;
-  font-family:system-ui;
+  font-family:-apple-system, sans-serif;
   background:#020617;
   color:white;
 }
 
 .container{
-  max-width:500px;
+  max-width:420px;
   margin:auto;
-  padding:16px;
-  padding-bottom:120px;
+  padding:12px;
+  padding-bottom:90px;
+}
+
+.header{
+  text-align:center;
+  margin-bottom:14px;
+}
+
+.title{
+  font-size:20px;
+  font-weight:700;
+  background:linear-gradient(90deg,#22c55e,#4ade80);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+.subtitle{
+  font-size:12px;
+  opacity:0.6;
 }
 
 .card{
   background:rgba(255,255,255,0.05);
-  padding:14px;
-  border-radius:16px;
-  margin-bottom:12px;
+  backdrop-filter:blur(20px);
+  border-radius:18px;
+  padding:12px;
+  margin-bottom:10px;
 }
 
 button{
   width:100%;
-  padding:14px;
+  padding:10px;
   border:none;
-  border-radius:16px;
+  border-radius:12px;
   background:#22c55e;
   color:white;
-  font-weight:bold;
+}
+
+.logout{
+  background:#ef4444;
 }
 
 input,select{
   width:100%;
   padding:10px;
   margin-top:6px;
-  border-radius:10px;
-  border:none;
+  border-radius:12px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.1);
+  color:white;
 }
 
-.fab{
-  position:fixed;
-  bottom:100px;
-  right:20px;
-  width:60px;
-  height:60px;
-  border-radius:50%;
+.timer{
   font-size:28px;
+  text-align:center;
 }
 
+.bottom-nav{
+  position:fixed;
+  bottom:10px;
+  left:10px;
+  right:10px;
+  display:flex;
+  justify-content:space-around;
+  background:rgba(255,255,255,0.08);
+  border-radius:20px;
+  padding:8px;
+}
+
+.nav-btn{
+  flex:1;
+  background:none;
+  color:#aaa;
+}
+
+.nav-btn.active{
+  color:#22c55e;
+}
 </style>
 </head>
 
@@ -64,21 +106,45 @@ input,select{
 
 <div class="container">
 
-<!-- LOGIN -->
 <div id="loginScreen" class="card">
-<h2>Login</h2>
-<button onclick="login()">Login with Google</button>
+<h3>Login</h3>
+<button onclick="login()">Continue with Google</button>
 </div>
 
-<!-- APP -->
-<div id="app" style="display:none;">
+<div id="app" style="display:none">
+
+<div class="header">
+  <div class="title">GymTracker Pro</div>
+  <div id="userName" class="subtitle"></div>
+</div>
+
+<!-- HOME -->
+<div id="homeTab">
 
 <div class="card">
+
 <select id="exercise">
+<option value="">-- Select Exercise --</option>
 <option>Bench Press</option>
 <option>Squat</option>
 <option>Deadlift</option>
+<option>Overhead Press</option>
+<option>Barbell Row</option>
+<option>Pull Up</option>
+<option>Lat Pulldown</option>
+<option>Dumbbell Curl</option>
+<option>Triceps Pushdown</option>
+<option>Lateral Raise</option>
+<option>Incline Bench Press</option>
+<option>Chest Fly</option>
+<option>Leg Press</option>
+<option>Romanian Deadlift</option>
+<option>Hammer Curl</option>
+<option>Face Pull</option>
+<option>Calf Raise</option>
 </select>
+
+<input id="customExercise" placeholder="Or type exercise name">
 
 <input id="reps" placeholder="Reps">
 <input id="weight" placeholder="Weight">
@@ -87,100 +153,236 @@ input,select{
 </div>
 
 <div class="card">
-<h3>Sets</h3>
-<div id="sets"></div>
+<h3>🏆 PR</h3>
+<div id="pr"></div>
 </div>
 
-<button onclick="saveWorkout()">Save Workout</button>
+<div class="card">
+<h3>History</h3>
+<div id="history"></div>
+</div>
 
+<div class="card">
+<h3>Rest Timer</h3>
+<input id="restInput" type="number" value="90">
+<div id="timer" class="timer">01:30</div>
+<button onclick="startTimer()">Start</button>
 </div>
 
 </div>
 
-<button class="fab" onclick="addSet()">+</button>
+<!-- PROGRESS -->
+<div id="progressTab" style="display:none">
+<div class="card">
+<h3>Progress</h3>
+<canvas id="chart"></canvas>
+</div>
+</div>
 
-<!-- ✅ FIREBASE (CORRECT MODULE VERSION) -->
+<!-- PROFILE -->
+<div id="profileTab" style="display:none">
+<div class="card">
+<h3>Profile</h3>
+<p id="profileName"></p>
+</div>
+
+<div class="card">
+<h3>Stats</h3>
+<div id="stats"></div>
+</div>
+
+<div class="card">
+<h3>🏆 Best Lifts</h3>
+<div id="bestLifts"></div>
+</div>
+
+<div class="card">
+<button class="logout" onclick="logout()">Logout</button>
+</div>
+</div>
+
+</div>
+
+</div>
+
+<div class="bottom-nav">
+<button class="nav-btn active" onclick="switchTab('home',this)">🏠</button>
+<button class="nav-btn" onclick="switchTab('progress',this)">📊</button>
+<button class="nav-btn" onclick="switchTab('profile',this)">👤</button>
+</div>
+
 <script type="module">
 
-// ✅ IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// 🔥 PASTE YOUR CONFIG HERE
 const firebaseConfig = {
-    apiKey: "AIzaSyACiN9JF2EXiGv2oBVor1zdh7TTu3GsuDs",
-    authDomain: "gymtracker-5818e.firebaseapp.com",
-    projectId: "gymtracker-5818e",
-    storageBucket: "gymtracker-5818e.firebasestorage.app",
-    messagingSenderId: "95959734615",
-    appId: "1:95959734615:web:7de4ddfa499dd0cf1f8612",
-    measurementId: "G-7NMX853H5T"
-  };
-
-// INIT
-const app = initializeApp(firebaseConfig);
-const auth = getAuth();
-const db = getFirestore();
-
-let user = null;
-let setList = [];
-
-// LOGIN
-window.login = async function(){
-  const provider = new GoogleAuthProvider();
-  await signInWithPopup(auth, provider);
+  apiKey: "AIzaSyACiN9JF2EXiGv2oBVor1zdh7TTu3GsuDs",
+  authDomain: "gymtracker-5818e.firebaseapp.com",
+  projectId: "gymtracker-5818e",
+  storageBucket: "gymtracker-5818e.firebasestorage.app",
+  messagingSenderId: "95959734615",
+  appId: "1:95959734615:web:7de4ddfa499dd0cf1f8612"
 };
 
-// AUTH STATE
-onAuthStateChanged(auth, (u)=>{
-  if(u){
-    user = u;
-    loginScreen.style.display="none";
-    app.style.display="block";
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser=null;
+let chart;
+
+// LOGIN
+window.login = async()=>{
+  await signInWithPopup(auth,new GoogleAuthProvider());
+};
+
+// LOGOUT
+window.logout = async()=>{
+  await signOut(auth);
+};
+
+// AUTH
+onAuthStateChanged(auth,(user)=>{
+  if(user){
+    currentUser=user;
+    document.getElementById("loginScreen").style.display="none";
+    document.getElementById("app").style.display="block";
+    document.getElementById("userName").innerText=user.displayName;
+    document.getElementById("profileName").innerText=user.displayName;
+    loadData();
+  }else{
+    document.getElementById("loginScreen").style.display="block";
+    document.getElementById("app").style.display="none";
   }
 });
 
-// ADD SET
-window.addSet = function(){
-  let r = reps.value;
-  let w = weight.value;
-  if(!r || !w) return;
+// ADD SET (UPDATED)
+window.addSet=async()=>{
+  const dropdown = document.getElementById("exercise").value;
+  const custom = document.getElementById("customExercise").value;
 
-  setList.push({reps:r,weight:w});
-  renderSets();
+  const ex = custom ? custom : dropdown;
 
-  reps.value="";
-  weight.value="";
-};
+  const r = +document.getElementById("reps").value;
+  const w = +document.getElementById("weight").value;
 
-// RENDER
-function renderSets(){
-  sets.innerHTML="";
-  setList.forEach((s,i)=>{
-    sets.innerHTML += `<div>Set ${i+1}: ${s.reps} reps ${s.weight}kg</div>`;
-  });
-}
+  if(!ex){
+    alert("Enter or select exercise");
+    return;
+  }
 
-// SAVE TO FIREBASE
-window.saveWorkout = async function(){
-  if(!user){
-    alert("Login first");
+  if(!r || !w){
+    alert("Enter reps & weight");
     return;
   }
 
   await addDoc(collection(db,"workouts"),{
-    user:user.uid,
-    exercise:exercise.value,
-    sets:setList,
-    date:Date.now()
+    uid:currentUser.uid,
+    exercise:ex,
+    reps:r,
+    weight:w,
+    date:new Date()
   });
 
-  alert("Saved to cloud ✅");
+  // CLEAR INPUTS
+  document.getElementById("customExercise").value="";
+  document.getElementById("reps").value="";
+  document.getElementById("weight").value="";
 
-  setList=[];
-  renderSets();
+  // AUTO START TIMER
+  startTimer();
+
+  loadData();
 };
+
+// LOAD DATA
+async function loadData(){
+  const snap=await getDocs(collection(db,"workouts"));
+
+  let html="",max=0,data=[],totalSets=0,dates=new Set(),best={};
+
+  snap.forEach(doc=>{
+    const d=doc.data();
+    if(d.uid===currentUser.uid){
+      totalSets++;
+      html+=`<div>${d.exercise} • ${d.reps}x • ${d.weight}kg</div>`;
+      data.push(d.weight);
+      if(d.weight>max)max=d.weight;
+      if(!best[d.exercise]||d.weight>best[d.exercise])best[d.exercise]=d.weight;
+      const date=new Date(d.date.seconds*1000).toDateString();
+      dates.add(date);
+    }
+  });
+
+  let streak=0,today=new Date();
+  for(let i=0;i<365;i++){
+    let check=new Date();
+    check.setDate(today.getDate()-i);
+    if(dates.has(check.toDateString()))streak++;
+    else break;
+  }
+
+  document.getElementById("history").innerHTML=html||"No data";
+  document.getElementById("pr").innerText=max?max+" kg":"No PR";
+
+  document.getElementById("stats").innerHTML=`
+    <div>Total Sets: ${totalSets}</div>
+    <div>Workout Days: ${dates.size}</div>
+    <div>Streak: ${streak} days</div>
+  `;
+
+  let bestHTML="";
+  for(let ex in best){
+    bestHTML+=`<div>${ex}: ${best[ex]} kg</div>`;
+  }
+  document.getElementById("bestLifts").innerHTML=bestHTML;
+
+  drawChart(data);
+}
+
+// CHART
+function drawChart(data){
+  const ctx=document.getElementById("chart");
+  if(chart)chart.destroy();
+  chart=new Chart(ctx,{type:"line",data:{labels:data.map((_,i)=>i+1),datasets:[{data:data}]}})
+}
+
+// TABS
+window.switchTab=(tab,btn)=>{
+  document.getElementById("homeTab").style.display=tab==="home"?"block":"none";
+  document.getElementById("progressTab").style.display=tab==="progress"?"block":"none";
+  document.getElementById("profileTab").style.display=tab==="profile"?"block":"none";
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+};
+
+// TIMER
+let interval;
+window.startTimer=()=>{
+  clearInterval(interval);
+  let current=parseInt(document.getElementById("restInput").value)||90;
+
+  interval=setInterval(()=>{
+    current--;
+    let m=Math.floor(current/60);
+    let s=current%60;
+
+    document.getElementById("timer").innerText=
+      `${m}:${s.toString().padStart(2,'0')}`;
+
+    if(current<=0){
+      clearInterval(interval);
+      new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg").play();
+    }
+  },1000);
+};
+
+// PWA
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
+}
 
 </script>
 
